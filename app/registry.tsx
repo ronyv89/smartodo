@@ -21,7 +21,9 @@ export default function StyledJsxRegistry({
     const { getStyleElement } = AppRegistry.getApplication("Main");
     if (!isServerInserted.current) {
       isServerInserted.current = true;
-      const styles = [getStyleElement(), jsxStyleRegistry.styles(), flush()];
+      const styleElement = Object.assign({}, { ...getStyleElement(), key: "react-stylesheet" });
+
+      const styles = [styleElement, jsxStyleRegistry.styles(), flush()];
       jsxStyleRegistry.flush();
       return <>{styles}</>;
     }

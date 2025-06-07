@@ -1,72 +1,102 @@
 import { Box } from "@/components/ui/box";
 import { Text } from "@/components/ui/text";
-import Image from "next/image";
+import { Heading } from "@/components/ui/heading";
+import { Button, ButtonText } from "@/components/ui/button";
+import { Center } from "@/components/ui/center";
+import { VStack } from "@/components/ui/vstack";
+import { HStack } from "@/components/ui/hstack";
+import { Icon, CheckCircleIcon } from "@/components/ui/icon";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <main>
-      <Container />
-    </main>
+    <Box className="flex-1 bg-background-0">
+      {/* Hero Section */}
+      <Box className="bg-primary-500 py-20 lg:py-32">
+        <Center>
+          <VStack space="md" className="items-center max-w-3xl px-4">
+            <Heading size="4xl" className="text-typography-0 text-center">
+              Welcome to SmarTODO
+            </Heading>
+            <Text size="xl" className="text-primary-100 text-center">
+              The intelligent task manager that helps you achieve more, effortlessly.
+            </Text>
+            <Button size="xl" action="secondary" className="mt-6">
+              <ButtonText>Get Started for Free</ButtonText>
+            </Button>
+          </VStack>
+        </Center>
+      </Box>
+
+      {/* Features Section */}
+      <Box className="py-16 lg:py-24">
+        <Center>
+          <VStack space="xl" className="max-w-5xl px-4">
+            <Heading size="3xl" className="text-center text-typography-900">
+              Why SmarTODO?
+            </Heading>
+            <HStack space="lg" className="flex-wrap justify-center mt-10">
+              <FeatureItem
+                title="AI-Powered Suggestions"
+                description="Let our smart AI help you break down tasks and suggest next steps."
+              />
+              <FeatureItem
+                title="Seamless Collaboration"
+                description="Share projects and tasks with your team in real-time."
+              />
+              <FeatureItem
+                title="Beautiful & Intuitive UI"
+                description="Enjoy a clean, modern interface that's a pleasure to use."
+              />
+            </HStack>
+          </VStack>
+        </Center>
+      </Box>
+
+      {/* Call to Action Section */}
+      <Box className="bg-secondary-100 py-16 lg:py-24">
+        <Center>
+          <VStack space="md" className="items-center max-w-2xl px-4 text-center">
+            <Heading size="2xl" className="text-typography-900">
+              Ready to Boost Your Productivity?
+            </Heading>
+            <Text size="lg" className="text-typography-700">
+              Sign up today and experience the future of task management.
+            </Text>
+            <Button size="xl" action="primary" className="mt-6">
+              <ButtonText>Sign Up Now</ButtonText>
+            </Button>
+          </VStack>
+        </Center>
+      </Box>
+
+      {/* Footer */}
+      <Box className="py-8 bg-neutral-800">
+        <Center>
+          <Text className="text-neutral-400">
+            © {new Date().getFullYear()} SmarTODO. All rights reserved.
+          </Text>
+        </Center>
+      </Box>
+    </Box>
   );
 }
 
-const FeatureCard = ({ iconSvg, name, desc }: any) => {
+interface FeatureItemProps {
+  title: string;
+  description: string;
+}
+
+const FeatureItem = ({ title, description }: FeatureItemProps) => {
   return (
-    <Box className="flex-column border border-w-1 border-outline-700 flex-1 m-2 p-4 rounded">
-      <Box className="items-center flex flex-row">
-        <Image
-          src={`/${iconSvg}`}
-          alt="document"
-          priority
-          width={22}
-          height={22}
-        />
-        <Text className="text-typography-white font-medium ml-2 text-xl">
-          {name}
-        </Text>
-      </Box>
-      <Text className="text-typography-400 mt-2">{desc}</Text>
+    <Box className="bg-background-0 p-6 rounded-lg shadow-md w-full md:w-1/3 max-w-sm m-2">
+      <VStack space="sm">
+        <HStack space="sm" className="items-center">
+          <Icon as={CheckCircleIcon} size="md" className="text-primary-500" />
+          <Heading size="lg" className="text-typography-900">{title}</Heading>
+        </HStack>
+        <Text className="text-typography-700">{description}</Text>
+      </VStack>
     </Box>
   );
 };
 
-const Container = () => {
-  return (
-    <Box className="flex-1 bg-black h-[100vh]">
-      <Box className="absolute h-[500px] w-[500px] lg:w-[700px] lg:h-[700px]">
-        <Image src="/gradient.svg" alt="Gradient" fill priority />
-      </Box>
-      <Box className="flex flex-1 items-center my-16 mx-5 lg:my-24 lg:mx-32">
-        <Box className="py-2 px-6 rounded-full items-center flex-column sm:flex-row md:self-start">
-          <Text className="text-typography-white font-normal">
-            Get started by editing
-          </Text>
-          <Text className="text-typography-white font-medium ml-2">
-            <code>./app/page.tsx</code>
-          </Text>
-        </Box>
-        <Box className="flex-1 justify-center items-center h-[20px] w-[300px] lg:h-[160px] lg:w-[400px]">
-          <Image src="/logo.svg" fill alt="logo" priority />
-        </Box>
-
-        <Box className="flex-column md:flex-row">
-          <FeatureCard
-            iconSvg="document-data.svg"
-            name="Docs"
-            desc="Find in-depth information about gluestack features and API."
-          />
-          <FeatureCard
-            iconSvg="lightbulb-person.svg"
-            name="Learn"
-            desc="Learn about gluestack in an interactive course with quizzes!"
-          />
-          <FeatureCard
-            iconSvg="rocket.svg"
-            name="Deploy"
-            desc="Instantly drop your gluestack site to a shareable URL with vercel."
-          />
-        </Box>
-      </Box>
-    </Box>
-  );
-};

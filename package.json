@@ -44,7 +44,7 @@
     "@legendapp/motion": "^2.4.0",
     "autoprefixer": "^10.4.20",
     "nativewind": "^4.1.23",
-    "next": "15.1.4",
+    "next": "15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-native": "^0.76.6",

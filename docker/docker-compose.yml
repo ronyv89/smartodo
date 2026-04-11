@@ -1,25 +1,33 @@
 version: '3.8'
 
-# Local Supabase stack for development and CI
-# For day-to-day dev, prefer `supabase start` (Supabase CLI)
-# This compose file is for production-like and CI environments
+# smarTODO — local / self-hosted stack
+#
+# Quick start:
+#   cp .env.local.example .env.local   # fill in your values
+#   docker compose -f docker/docker-compose.yml up
+#
+# For day-to-day dev, prefer `supabase start` + `pnpm dev` natively.
+# This compose file is for production-like, CI, and self-hosted environments.
 
 services:
+  # ── Postgres ────────────────────────────────────────────────────────────────
   supabase-db:
     image: supabase/postgres:15.1.1.78
     ports:
       - '54322:5432'
     environment:
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: smartodo
     volumes:
       - supabase-db-data:/var/lib/postgresql/data
+      - ../supabase/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # ── Supabase Studio ──────────────────────────────────────────────────────────
   supabase-studio:
     image: supabase/studio:latest
     ports:
@@ -30,11 +38,12 @@ services:
       supabase-db:
         condition: service_healthy
 
+  # ── Kong API gateway ──────────────────────────────────────────────────────────
   supabase-kong:
     image: kong:2.8.1
     ports:
-      - '54321:8000' # Supabase API
-      - '54324:8443' # Supabase API (SSL)
+      - '54321:8000'   # Supabase REST / Auth API
+      - '54324:8443'   # Supabase API (SSL)
     environment:
       KONG_DATABASE: 'off'
       KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
@@ -42,6 +51,7 @@ services:
       supabase-db:
         condition: service_healthy
 
+  # ── GoTrue (auth) ─────────────────────────────────────────────────────────────
   supabase-auth:
     image: supabase/gotrue:latest
     ports:
@@ -50,7 +60,7 @@ services:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://postgres:postgres@supabase-db:5432/smartodo?search_path=auth
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@supabase-db:5432/smartodo?search_path=auth
       GOTRUE_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
       GOTRUE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
       GOTRUE_JWT_EXP: 3600
@@ -60,13 +70,14 @@ services:
       supabase-db:
         condition: service_healthy
 
+  # ── Realtime ─────────────────────────────────────────────────────────────────
   supabase-realtime:
     image: supabase/realtime:latest
     environment:
       DB_HOST: supabase-db
       DB_PORT: 5432
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DB_NAME: smartodo
       PORT: 4000
       JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
@@ -76,6 +87,7 @@ services:
       supabase-db:
         condition: service_healthy
 
+  # ── Storage ──────────────────────────────────────────────────────────────────
   supabase-storage:
     image: supabase/storage-api:latest
     environment:
@@ -83,8 +95,8 @@ services:
       SERVICE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder}
       POSTGREST_URL: http://supabase-kong:8000/rest/v1
       PGRST_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
-      DATABASE_URL: postgres://postgres:postgres@supabase-db:5432/smartodo
-      FILE_SIZE_LIMIT: 52428800
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@supabase-db:5432/smartodo
+      FILE_SIZE_LIMIT: 52428800   # 50 MB
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
     volumes:
@@ -93,21 +105,36 @@ services:
       supabase-db:
         condition: service_healthy
 
-  # Next.js app dev server (optional — can also run natively with `pnpm dev`)
+  # ── Next.js app ──────────────────────────────────────────────────────────────
   app:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://supabase-kong:8000}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+        NEXT_PUBLIC_APP_VERSION: ${APP_VERSION:-dev}
     ports:
       - '3000:3000'
     environment:
-      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      # Runtime-only secrets (not baked into the image)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:54321}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      NODE_ENV: production
     depends_on:
-      - supabase-kong
-    volumes:
-      - ../apps/web:/app/apps/web
-      - ../packages:/app/packages
+      supabase-kong:
+        condition: service_started
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/api/health | grep -q "ok" || exit 1']
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
 
 volumes:
   supabase-db-data:

@@ -11,7 +11,8 @@ describe('WorkspaceSwitcher', () => {
     render(
       <WorkspaceSwitcher workspaces={workspaces} currentWorkspaceId="ws-1" onChange={jest.fn()} />,
     );
-    const select = screen.getByTestId('workspace-select');
+    // combobox is the ARIA role for <select>
+    const select = screen.getByRole<HTMLSelectElement>('combobox');
     expect(select.options).toHaveLength(2);
     expect(select.options[0]?.text).toBe('Alpha');
     expect(select.options[1]?.text).toBe('Beta');
@@ -21,8 +22,7 @@ describe('WorkspaceSwitcher', () => {
     render(
       <WorkspaceSwitcher workspaces={workspaces} currentWorkspaceId="ws-2" onChange={jest.fn()} />,
     );
-    const select = screen.getByTestId('workspace-select');
-    expect(select.value).toBe('ws-2');
+    expect(screen.getByDisplayValue('Beta')).toBeInTheDocument();
   });
 
   it('displays the slug of the current workspace', () => {
@@ -41,7 +41,7 @@ describe('WorkspaceSwitcher', () => {
         onChange={handleChange}
       />,
     );
-    fireEvent.change(screen.getByTestId('workspace-select'), { target: { value: 'ws-2' } });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'ws-2' } });
     expect(handleChange).toHaveBeenCalledWith('ws-2');
   });
 

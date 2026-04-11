@@ -3,7 +3,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { PriorityBadge, StatusBadge } from '@smartodo/ui';
 import type { Task, Project } from '@smartodo/supabase';
-import { listProjects, listTasks, createTask, updateTask, deleteTask } from '@smartodo/supabase';
+import {
+  listProjects,
+  listTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  subscribeToProjectTasks,
+  unsubscribeChannel,
+} from '@smartodo/supabase';
+import type { RealtimeChannel } from '@smartodo/supabase';
 import { parseTaskInput } from '@smartodo/core';
 import KanbanBoard from './KanbanBoard';
 import TaskDetailPanel from './TaskDetailPanel';
@@ -36,17 +45,41 @@ export default function TaskListPanel({ workspaceId, userId }: TaskListPanelProp
   }, []);
 
   useEffect(() => {
+    let channel: RealtimeChannel | null = null;
+
     void (async () => {
       setLoading(true);
       const { data } = await listProjects(workspaceId);
       const projectList = data ?? [];
       setProjects(projectList);
-      if (projectList.length > 0 && projectList[0] !== undefined) {
-        setActiveProjectId(projectList[0].id);
-        await fetchTasks(projectList[0].id);
+      const firstProject = projectList[0];
+      if (firstProject !== undefined) {
+        setActiveProjectId(firstProject.id);
+        await fetchTasks(firstProject.id);
+        // Subscribe to realtime updates for this project
+        channel = subscribeToProjectTasks(firstProject.id, (payload) => {
+          const newTask = payload.new;
+          const oldTask = payload.old;
+          if (payload.event === 'INSERT' && newTask !== null) {
+            setTasks((prev) => {
+              const exists = prev.some((t) => t.id === newTask.id);
+              return exists ? prev : [...prev, newTask];
+            });
+          } else if (payload.event === 'UPDATE' && newTask !== null) {
+            setTasks((prev) => prev.map((t) => (t.id === newTask.id ? newTask : t)));
+          } else if (payload.event === 'DELETE' && oldTask !== null) {
+            setTasks((prev) => prev.filter((t) => t.id !== oldTask.id));
+          }
+        });
       }
       setLoading(false);
     })();
+
+    return () => {
+      if (channel !== null) {
+        void unsubscribeChannel(channel);
+      }
+    };
   }, [workspaceId, fetchTasks]);
 
   async function handleAddTask(e: React.SyntheticEvent<HTMLFormElement>) {

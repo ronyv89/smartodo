@@ -4,4 +4,6 @@ export * from './auth';
 export * from './workspaces';
 export * from './projects';
 export * from './tasks';
+export * from './realtime';
+export type { RealtimeChannel } from '@supabase/supabase-js';
 export type { Database, Json } from './database.types';

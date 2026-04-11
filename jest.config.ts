@@ -3,7 +3,7 @@ import type { Config } from 'jest';
 const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  roots: ['<rootDir>/apps/web/src', '<rootDir>/packages'],
+  roots: ['<rootDir>/apps/web/src', '<rootDir>/packages', '<rootDir>/plugins'],
   testMatch: ['**/*.test.ts', '**/*.test.tsx'],
   testPathIgnorePatterns: ['/node_modules/', 'integration'],
   moduleNameMapper: {
@@ -18,6 +18,8 @@ const config: Config = {
     '^@smartodo/plugin-sdk(.*)$': '<rootDir>/packages/plugin-sdk/src$1',
     '^@smartodo/ai(.*)$': '<rootDir>/packages/ai/src$1',
     '^@smartodo/supabase(.*)$': '<rootDir>/packages/supabase/src$1',
+    '^@smartodo/plugin-sprint-board(.*)$': '<rootDir>/plugins/sprint-board/src$1',
+    '^@smartodo/plugin-time-tracking(.*)$': '<rootDir>/plugins/time-tracking/src$1',
     '^@/(.*)$': '<rootDir>/apps/web/src/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],

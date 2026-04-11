@@ -1,9 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Task, TaskComment } from '@smartodo/supabase';
+import type { Task, TaskComment, ActivityLog } from '@smartodo/supabase';
 import { PriorityBadge, StatusBadge } from '@smartodo/ui';
-import { updateTask, listComments, addComment, deleteComment } from '@smartodo/supabase';
+import {
+  updateTask,
+  listComments,
+  addComment,
+  deleteComment,
+  listActivityLogs,
+  logActivity,
+} from '@smartodo/supabase';
 
 interface TaskDetailPanelProps {
   task: Task;
@@ -19,6 +26,7 @@ export default function TaskDetailPanel({
   onTaskUpdate,
 }: TaskDetailPanelProps) {
   const [comments, setComments] = useState<TaskComment[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [commentBody, setCommentBody] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
@@ -26,17 +34,25 @@ export default function TaskDetailPanel({
 
   useEffect(() => {
     void (async () => {
-      const { data } = await listComments(task.id);
-      setComments(data ?? []);
+      const [commentsResult, logsResult] = await Promise.all([
+        listComments(task.id),
+        listActivityLogs(task.id),
+      ]);
+      setComments(commentsResult.data ?? []);
+      setActivityLogs(logsResult.data ?? []);
     })();
   }, [task.id]);
 
   async function handleTitleSave() {
-    if (titleDraft.trim() === task.title) {
+    const newTitle = titleDraft.trim();
+    if (newTitle === task.title) {
       setEditingTitle(false);
       return;
     }
-    const { data: updated } = await updateTask(task.id, { title: titleDraft.trim() });
+    const [{ data: updated }] = await Promise.all([
+      updateTask(task.id, { title: newTitle }),
+      logActivity(task.id, userId, 'title_changed', { from: task.title, to: newTitle }),
+    ]);
     if (updated !== null) {
       onTaskUpdate(updated);
     }
@@ -45,16 +61,28 @@ export default function TaskDetailPanel({
 
   async function handleStatusChange(status: Task['status']) {
     const completedAt = status === 'done' ? new Date().toISOString() : null;
-    const { data: updated } = await updateTask(task.id, { status, completed_at: completedAt });
+    const [{ data: updated }, { data: logEntry }] = await Promise.all([
+      updateTask(task.id, { status, completed_at: completedAt }),
+      logActivity(task.id, userId, 'status_changed', { from: task.status, to: status }),
+    ]);
     if (updated !== null) {
       onTaskUpdate(updated);
+    }
+    if (logEntry !== null) {
+      setActivityLogs((prev) => [logEntry, ...prev]);
     }
   }
 
   async function handlePriorityChange(priority: Task['priority']) {
-    const { data: updated } = await updateTask(task.id, { priority });
+    const [{ data: updated }, { data: logEntry }] = await Promise.all([
+      updateTask(task.id, { priority }),
+      logActivity(task.id, userId, 'priority_changed', { from: task.priority, to: priority }),
+    ]);
     if (updated !== null) {
       onTaskUpdate(updated);
+    }
+    if (logEntry !== null) {
+      setActivityLogs((prev) => [logEntry, ...prev]);
     }
   }
 
@@ -240,6 +268,33 @@ export default function TaskDetailPanel({
             </button>
           </form>
         </div>
+
+        {/* Activity log */}
+        {activityLogs.length > 0 && (
+          <div className="mt-6 border-t border-gray-100 pt-4">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Activity
+            </h3>
+            <ul data-testid="activity-log" className="space-y-2">
+              {activityLogs.map((log) => (
+                <li
+                  key={log.id}
+                  data-testid={`activity-${log.id}`}
+                  className="flex items-start gap-2 text-xs text-gray-500"
+                >
+                  <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300" />
+                  <span>
+                    <span className="font-medium text-gray-700">
+                      {log.action.replace(/_/g, ' ')}
+                    </span>
+                    {' · '}
+                    {new Date(log.created_at).toLocaleDateString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </aside>
   );

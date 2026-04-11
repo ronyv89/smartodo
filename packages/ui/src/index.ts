@@ -1,4 +1,5 @@
-// @smartodo/ui — smarTODO-flavoured Argon Design System re-exports
-// Argon components will be re-exported here with smarTODO defaults
-// once argon-design-system-react is installed in Step 0.6
-export {};
+// @smartodo/ui — smarTODO-flavoured component library
+// Built on Bootstrap 4 class conventions with Argon brand design tokens
+export { SmButton } from './components/SmButton';
+export { SmCard } from './components/SmCard';
+export { SmBadge, PriorityBadge, StatusBadge } from './components/SmBadge';

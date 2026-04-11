@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "target": "ES2017",
+    "allowJs": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@smartodo/core": ["./packages/core/src"],
+      "@smartodo/core/*": ["./packages/core/src/*"],
+      "@smartodo/ui": ["./packages/ui/src"],
+      "@smartodo/ui/*": ["./packages/ui/src/*"],
+      "@smartodo/supabase": ["./packages/supabase/src"],
+      "@smartodo/supabase/*": ["./packages/supabase/src/*"],
+      "@smartodo/ai": ["./packages/ai/src"],
+      "@smartodo/ai/*": ["./packages/ai/src/*"],
+      "@smartodo/plugin-sdk": ["./packages/plugin-sdk/src"],
+      "@smartodo/plugin-sdk/*": ["./packages/plugin-sdk/src/*"],
+      "@/*": ["./apps/web/src/*"]
+    },
+    "types": ["node", "@testing-library/jest-dom"]
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

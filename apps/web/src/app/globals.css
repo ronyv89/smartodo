@@ -1,0 +1,64 @@
+/* Bootstrap 4 — Argon Design System foundation */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* Tailwind CSS */
+@import 'tailwindcss';
+
+/* ──────────────────────────────────────────────
+   smarTODO Brand Tokens (Argon palette)
+   Override Bootstrap variables via CSS custom properties
+   ────────────────────────────────────────────── */
+:root {
+  /* Primary: deep blue — task focus */
+  --smartodo-primary: #5e72e4;
+  /* Success: green — completed tasks */
+  --smartodo-success: #2dce89;
+  /* Warning: amber — approaching deadlines */
+  --smartodo-warning: #fb6340;
+  /* Info: teal — AI suggestions */
+  --smartodo-info: #11cdef;
+  /* Danger: red — overdue tasks */
+  --smartodo-danger: #f5365c;
+
+  /* Typography */
+  --smartodo-font-sans: 'Open Sans', system-ui, -apple-system, sans-serif;
+}
+
+@theme inline {
+  --color-primary: var(--smartodo-primary);
+  --color-success: var(--smartodo-success);
+  --color-warning: var(--smartodo-warning);
+  --color-info: var(--smartodo-info);
+  --color-danger: var(--smartodo-danger);
+}
+
+body {
+  font-family: var(--smartodo-font-sans);
+  background-color: #f8f9fe;
+  color: #525f7f;
+}
+
+/* Argon-style gradient buttons */
+.btn-smartodo-primary {
+  background: linear-gradient(87deg, #5e72e4 0, #825ee4 100%);
+  border: none;
+  color: #fff;
+  box-shadow:
+    0 4px 6px rgb(50 50 93 / 11%),
+    0 1px 3px rgb(0 0 0 / 8%);
+  transition: all 0.15s ease;
+}
+
+.btn-smartodo-primary:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 7px 14px rgb(50 50 93 / 10%),
+    0 3px 6px rgb(0 0 0 / 8%);
+}
+
+/* Argon-style card */
+.card-smartodo {
+  border: 0;
+  border-radius: 0.375rem;
+  box-shadow: 0 0 2rem 0 rgb(136 152 170 / 15%);
+}

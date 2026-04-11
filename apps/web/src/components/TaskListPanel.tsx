@@ -17,6 +17,7 @@ import { parseTaskInput } from '@smartodo/core';
 import KanbanBoard from './KanbanBoard';
 import TaskDetailPanel from './TaskDetailPanel';
 import CommandPalette from './CommandPalette';
+import StandupWidget from './StandupWidget';
 import type { FilterSpec, UpdateSpec } from '@/app/api/ai/command/route';
 
 interface TaskListPanelProps {
@@ -436,6 +437,14 @@ export default function TaskListPanel({ workspaceId, userId }: TaskListPanelProp
           onTaskUpdate={handleTaskUpdate}
         />
       )}
+
+      {/* Standup / insights widget */}
+      <div className="mt-8">
+        <StandupWidget
+          tasks={tasks}
+          project={projects.find((p) => p.id === activeProjectId) ?? null}
+        />
+      </div>
     </div>
   );
 }

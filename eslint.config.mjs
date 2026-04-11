@@ -21,6 +21,8 @@ export default tseslint.config(
       '.turbo/**',
       'pnpm-lock.yaml',
       'coverage/**',
+      // Supabase Edge Functions use Deno globals — lint separately
+      'supabase/functions/**',
     ],
   },
 

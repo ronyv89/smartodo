@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { PriorityBadge, StatusBadge } from '@smartodo/ui';
 import type { Task, Project } from '@smartodo/supabase';
 import { listProjects, listTasks, createTask, updateTask, deleteTask } from '@smartodo/supabase';
+import { parseTaskInput } from '@smartodo/core';
 import KanbanBoard from './KanbanBoard';
 import TaskDetailPanel from './TaskDetailPanel';
 
@@ -53,12 +54,14 @@ export default function TaskListPanel({ workspaceId, userId }: TaskListPanelProp
     if (activeProjectId === null || taskForm.title.trim() === '') return;
 
     setSubmitting(true);
+    // Parse natural-language input (CE regex parser)
+    const parsed = parseTaskInput(taskForm.title);
     const { data: newTask } = await createTask({
       project_id: activeProjectId,
-      title: taskForm.title.trim(),
-      priority: taskForm.priority,
+      title: parsed.title,
+      priority: parsed.priority ?? taskForm.priority,
       assignee_id: null,
-      due_date: null,
+      due_date: parsed.due_date,
     });
     if (newTask !== null) {
       setTasks((prev) => [...prev, newTask]);

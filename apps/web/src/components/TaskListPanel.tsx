@@ -299,6 +299,7 @@ export default function TaskListPanel({ workspaceId, userId }: TaskListPanelProp
         <TaskDetailPanel
           task={selectedTask}
           userId={userId}
+          workspaceId={workspaceId}
           onClose={() => {
             setSelectedTask(null);
           }}

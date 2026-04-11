@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Task, TaskComment, ActivityLog } from '@smartodo/supabase';
+import type { Task, TaskComment, ActivityLog, Label } from '@smartodo/supabase';
 import { PriorityBadge, StatusBadge } from '@smartodo/ui';
 import {
   updateTask,
@@ -10,11 +10,14 @@ import {
   deleteComment,
   listActivityLogs,
   logActivity,
+  listLabels,
 } from '@smartodo/supabase';
+import type { SuggestLabelsResponse } from '@/app/api/ai/suggest-labels/route';
 
 interface TaskDetailPanelProps {
   task: Task;
   userId: string;
+  workspaceId: string;
   onClose: () => void;
   onTaskUpdate: (updated: Task) => void;
 }
@@ -22,6 +25,7 @@ interface TaskDetailPanelProps {
 export default function TaskDetailPanel({
   task,
   userId,
+  workspaceId,
   onClose,
   onTaskUpdate,
 }: TaskDetailPanelProps) {
@@ -31,17 +35,38 @@ export default function TaskDetailPanel({
   const [submittingComment, setSubmittingComment] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(task.title);
+  const [workspaceLabels, setWorkspaceLabels] = useState<Label[]>([]);
+  const [suggestedLabels, setSuggestedLabels] = useState<Label[]>([]);
+  const [suggestingLabels, setSuggestingLabels] = useState(false);
 
   useEffect(() => {
     void (async () => {
-      const [commentsResult, logsResult] = await Promise.all([
+      const [commentsResult, logsResult, labelsResult] = await Promise.all([
         listComments(task.id),
         listActivityLogs(task.id),
+        listLabels(workspaceId),
       ]);
       setComments(commentsResult.data ?? []);
       setActivityLogs(logsResult.data ?? []);
+      setWorkspaceLabels(labelsResult.data ?? []);
     })();
-  }, [task.id]);
+  }, [task.id, workspaceId]);
+
+  async function handleSuggestLabels() {
+    setSuggestingLabels(true);
+    setSuggestedLabels([]);
+    try {
+      const res = await fetch('/api/ai/suggest-labels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskTitle: task.title, labels: workspaceLabels }),
+      });
+      const json = (await res.json()) as SuggestLabelsResponse;
+      setSuggestedLabels(json.suggestions);
+    } finally {
+      setSuggestingLabels(false);
+    }
+  }
 
   async function handleTitleSave() {
     const newTitle = titleDraft.trim();
@@ -202,6 +227,42 @@ export default function TaskDetailPanel({
         {/* Status badge summary */}
         <div className="mb-6 flex gap-2">
           <StatusBadge status={task.status} />
+        </div>
+
+        {/* AI label suggestions */}
+        <div className="mb-6">
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              AI Labels
+            </label>
+            <button
+              onClick={() => void handleSuggestLabels()}
+              disabled={suggestingLabels || workspaceLabels.length === 0}
+              data-testid="suggest-labels-btn"
+              className="rounded px-2 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+            >
+              {suggestingLabels ? 'Thinking…' : 'Suggest'}
+            </button>
+          </div>
+          {suggestedLabels.length > 0 && (
+            <div data-testid="suggested-labels" className="flex flex-wrap gap-2">
+              {suggestedLabels.map((label) => (
+                <span
+                  key={label.id}
+                  data-testid={`suggested-label-${label.id}`}
+                  style={{ background: label.color }}
+                  className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                >
+                  {label.name}
+                </span>
+              ))}
+            </div>
+          )}
+          {!suggestingLabels && suggestedLabels.length === 0 && workspaceLabels.length > 0 && (
+            <p className="text-xs text-gray-400" data-testid="no-suggestions">
+              Click Suggest to get AI label recommendations.
+            </p>
+          )}
         </div>
 
         {/* Comments */}

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { rateLimit } from '@/lib/rate-limit';
+
+const limiter = rateLimit({ windowMs: 60_000, max: 20 });
 
 export interface BreakdownRequest {
   taskTitle: string;
@@ -34,6 +37,14 @@ Rules:
  * Returns JSON the client can preview and edit before bulk-creating subtasks.
  */
 export async function POST(request: Request): Promise<NextResponse> {
+  const limit = limiter(request);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait before retrying.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(limit.retryAfterMs / 1000)) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

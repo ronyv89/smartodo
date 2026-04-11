@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { AnthropicProvider } from '@smartodo/ai';
 import type { Label } from '@smartodo/core';
+import { rateLimit } from '@/lib/rate-limit';
+
+const limiter = rateLimit({ windowMs: 60_000, max: 20 });
 
 export interface SuggestLabelsRequest {
   taskTitle: string;
@@ -21,6 +24,14 @@ export interface SuggestLabelsResponse {
  * browser.  Returns up to 3 suggested labels from the workspace label list.
  */
 export async function POST(request: Request): Promise<NextResponse> {
+  const limit = limiter(request);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait before retrying.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(limit.retryAfterMs / 1000)) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

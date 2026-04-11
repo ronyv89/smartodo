@@ -16,6 +16,8 @@ import type { RealtimeChannel } from '@smartodo/supabase';
 import { parseTaskInput } from '@smartodo/core';
 import KanbanBoard from './KanbanBoard';
 import TaskDetailPanel from './TaskDetailPanel';
+import CommandPalette from './CommandPalette';
+import type { FilterSpec, UpdateSpec } from '@/app/api/ai/command/route';
 
 interface TaskListPanelProps {
   workspaceId: string;
@@ -38,11 +40,90 @@ export default function TaskListPanel({ workspaceId, userId }: TaskListPanelProp
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<{
+    filters: FilterSpec;
+    description: string;
+  } | null>(null);
 
   const fetchTasks = useCallback(async (projectId: string) => {
     const { data } = await listTasks(projectId);
     setTasks(data ?? []);
   }, []);
+
+  // Cmd+K / Ctrl+K → open command palette
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  function handleApplyFilter(filters: FilterSpec, description: string) {
+    setActiveFilter({ filters, description });
+  }
+
+  async function handleBatchUpdate(filterSpec: FilterSpec, update: UpdateSpec) {
+    const toUpdate = tasks.filter((t) => {
+      if (typeof filterSpec.status === 'string' && t.status !== filterSpec.status) return false;
+      if (typeof filterSpec.priority === 'string' && t.priority !== filterSpec.priority)
+        return false;
+      if (
+        typeof filterSpec.titleContains === 'string' &&
+        !t.title.toLowerCase().includes(filterSpec.titleContains.toLowerCase())
+      )
+        return false;
+      if (
+        typeof filterSpec.dueBefore === 'string' &&
+        (t.due_date === null || t.due_date > filterSpec.dueBefore)
+      )
+        return false;
+      if (
+        typeof filterSpec.dueAfter === 'string' &&
+        (t.due_date === null || t.due_date < filterSpec.dueAfter)
+      )
+        return false;
+      return true;
+    });
+    await Promise.all(
+      toUpdate.map((t) =>
+        updateTask(t.id, {
+          ...(typeof update.status === 'string' ? { status: update.status as Task['status'] } : {}),
+          ...(typeof update.priority === 'string'
+            ? { priority: update.priority as Task['priority'] }
+            : {}),
+        }),
+      ),
+    );
+    if (activeProjectId !== null) {
+      await fetchTasks(activeProjectId);
+    }
+  }
+
+  const filteredTasks =
+    activeFilter !== null
+      ? tasks.filter((t) => {
+          const f = activeFilter.filters;
+          if (typeof f.status === 'string' && t.status !== f.status) return false;
+          if (typeof f.priority === 'string' && t.priority !== f.priority) return false;
+          if (
+            typeof f.titleContains === 'string' &&
+            !t.title.toLowerCase().includes(f.titleContains.toLowerCase())
+          )
+            return false;
+          if (typeof f.dueBefore === 'string' && (t.due_date === null || t.due_date > f.dueBefore))
+            return false;
+          if (typeof f.dueAfter === 'string' && (t.due_date === null || t.due_date < f.dueAfter))
+            return false;
+          return true;
+        })
+      : tasks;
 
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
@@ -141,6 +222,37 @@ export default function TaskListPanel({ workspaceId, userId }: TaskListPanelProp
 
   return (
     <div data-testid="task-list-panel">
+      {/* Command palette (Cmd+K) */}
+      {commandPaletteOpen && (
+        <CommandPalette
+          tasks={tasks}
+          onApplyFilter={handleApplyFilter}
+          onBatchUpdate={(filters, update) => void handleBatchUpdate(filters, update)}
+          onClose={() => {
+            setCommandPaletteOpen(false);
+          }}
+        />
+      )}
+
+      {/* Active filter banner */}
+      {activeFilter !== null && (
+        <div
+          data-testid="active-filter-banner"
+          className="mb-4 flex items-center justify-between rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700"
+        >
+          <span>Filtered: {activeFilter.description}</span>
+          <button
+            onClick={() => {
+              setActiveFilter(null);
+            }}
+            data-testid="clear-filter"
+            className="ml-4 text-xs font-medium text-blue-500 hover:text-blue-700"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Header: project tabs + view toggle */}
       <div className="mb-6 flex items-end justify-between border-b border-gray-200">
         <div className="flex gap-2">
@@ -163,32 +275,48 @@ export default function TaskListPanel({ workspaceId, userId }: TaskListPanelProp
             </button>
           ))}
         </div>
-        {/* View toggle */}
-        <div className="mb-1 flex gap-1 rounded-lg border border-gray-200 p-1">
+        {/* View toggle + command palette trigger */}
+        <div className="mb-1 flex items-center gap-2">
           <button
             onClick={() => {
-              setViewMode('list');
+              setCommandPaletteOpen(true);
             }}
-            data-testid="view-list"
-            className={[
-              'rounded px-3 py-1 text-xs font-medium',
-              viewMode === 'list' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:text-gray-800',
-            ].join(' ')}
+            data-testid="open-command-palette"
+            className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-500 hover:border-gray-300 hover:text-gray-800"
+            title="Open command palette (⌘K)"
           >
-            List
+            <span>⌘K</span>
           </button>
-          <button
-            onClick={() => {
-              setViewMode('board');
-            }}
-            data-testid="view-board"
-            className={[
-              'rounded px-3 py-1 text-xs font-medium',
-              viewMode === 'board' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:text-gray-800',
-            ].join(' ')}
-          >
-            Board
-          </button>
+          <div className="flex gap-1 rounded-lg border border-gray-200 p-1">
+            <button
+              onClick={() => {
+                setViewMode('list');
+              }}
+              data-testid="view-list"
+              className={[
+                'rounded px-3 py-1 text-xs font-medium',
+                viewMode === 'list'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-gray-500 hover:text-gray-800',
+              ].join(' ')}
+            >
+              List
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('board');
+              }}
+              data-testid="view-board"
+              className={[
+                'rounded px-3 py-1 text-xs font-medium',
+                viewMode === 'board'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-gray-500 hover:text-gray-800',
+              ].join(' ')}
+            >
+              Board
+            </button>
+          </div>
         </div>
       </div>
 
@@ -235,17 +363,19 @@ export default function TaskListPanel({ workspaceId, userId }: TaskListPanelProp
       </form>
 
       {/* Kanban board */}
-      {viewMode === 'board' && <KanbanBoard tasks={tasks} onTasksChange={setTasks} />}
+      {viewMode === 'board' && <KanbanBoard tasks={filteredTasks} onTasksChange={setTasks} />}
 
       {/* Task list */}
       {viewMode === 'list' && (
         <ul data-testid="task-list" className="space-y-2">
-          {tasks.length === 0 && (
+          {filteredTasks.length === 0 && (
             <li className="py-8 text-center text-sm text-gray-400" data-testid="empty-task-list">
-              No tasks yet — add one above!
+              {activeFilter !== null
+                ? 'No tasks match the current filter.'
+                : 'No tasks yet — add one above!'}
             </li>
           )}
-          {tasks.map((task) => (
+          {filteredTasks.map((task) => (
             <li
               key={task.id}
               data-testid={`task-item-${task.id}`}

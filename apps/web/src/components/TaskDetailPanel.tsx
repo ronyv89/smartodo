@@ -13,6 +13,8 @@ import {
   listLabels,
 } from '@smartodo/supabase';
 import type { SuggestLabelsResponse } from '@/app/api/ai/suggest-labels/route';
+import type { BreakdownResponse, SubtaskSuggestion } from '@/app/api/ai/breakdown/route';
+import { createTask } from '@smartodo/supabase';
 
 interface TaskDetailPanelProps {
   task: Task;
@@ -38,6 +40,9 @@ export default function TaskDetailPanel({
   const [workspaceLabels, setWorkspaceLabels] = useState<Label[]>([]);
   const [suggestedLabels, setSuggestedLabels] = useState<Label[]>([]);
   const [suggestingLabels, setSuggestingLabels] = useState(false);
+  const [suggestedSubtasks, setSuggestedSubtasks] = useState<SubtaskSuggestion[]>([]);
+  const [breakingDown, setBreakingDown] = useState(false);
+  const [creatingSubtasks, setCreatingSubtasks] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -66,6 +71,40 @@ export default function TaskDetailPanel({
     } finally {
       setSuggestingLabels(false);
     }
+  }
+
+  async function handleBreakdown() {
+    setBreakingDown(true);
+    setSuggestedSubtasks([]);
+    try {
+      const res = await fetch('/api/ai/breakdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskTitle: task.title }),
+      });
+      const json = (await res.json()) as BreakdownResponse;
+      setSuggestedSubtasks(json.subtasks);
+    } finally {
+      setBreakingDown(false);
+    }
+  }
+
+  async function handleAcceptSubtasks() {
+    setCreatingSubtasks(true);
+    await Promise.all(
+      suggestedSubtasks.map((sub) =>
+        createTask({
+          project_id: task.project_id,
+          parent_id: task.id,
+          title: sub.title,
+          priority: (sub.priority as Task['priority'] | undefined) ?? 'p3',
+          assignee_id: null,
+          due_date: null,
+        }),
+      ),
+    );
+    setSuggestedSubtasks([]);
+    setCreatingSubtasks(false);
   }
 
   async function handleTitleSave() {
@@ -262,6 +301,61 @@ export default function TaskDetailPanel({
             <p className="text-xs text-gray-400" data-testid="no-suggestions">
               Click Suggest to get AI label recommendations.
             </p>
+          )}
+        </div>
+
+        {/* AI task breakdown */}
+        <div className="mb-6">
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              AI Breakdown
+            </label>
+            <button
+              onClick={() => void handleBreakdown()}
+              disabled={breakingDown}
+              data-testid="breakdown-btn"
+              className="rounded px-2 py-0.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+            >
+              {breakingDown ? 'Thinking…' : 'Break down'}
+            </button>
+          </div>
+          {suggestedSubtasks.length > 0 && (
+            <div data-testid="breakdown-suggestions">
+              <ul className="mb-3 space-y-1">
+                {suggestedSubtasks.map((sub, i) => (
+                  <li
+                    key={String(i)}
+                    data-testid={`breakdown-subtask-${String(i)}`}
+                    className="flex items-start gap-2 rounded bg-indigo-50 px-3 py-2 text-xs text-indigo-800"
+                  >
+                    <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400" />
+                    {sub.title}
+                    {sub.priority !== undefined && (
+                      <span className="ml-auto font-mono text-indigo-500">{sub.priority}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => void handleAcceptSubtasks()}
+                  disabled={creatingSubtasks}
+                  data-testid="breakdown-accept"
+                  className="rounded bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {creatingSubtasks ? 'Creating…' : 'Create subtasks'}
+                </button>
+                <button
+                  onClick={() => {
+                    setSuggestedSubtasks([]);
+                  }}
+                  data-testid="breakdown-dismiss"
+                  className="rounded px-3 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
           )}
         </div>
 

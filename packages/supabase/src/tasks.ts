@@ -31,7 +31,10 @@ export async function getTask(id: string): Promise<TaskResult<Task>> {
 }
 
 export async function createTask(
-  input: Pick<TaskInsert, 'project_id' | 'title' | 'priority' | 'assignee_id' | 'due_date'>,
+  input: Pick<
+    TaskInsert,
+    'project_id' | 'title' | 'priority' | 'assignee_id' | 'due_date' | 'parent_id'
+  >,
 ): Promise<TaskResult<Task>> {
   const { data, error } = await supabase.from('tasks').insert(input).select().single();
   return { data, error };

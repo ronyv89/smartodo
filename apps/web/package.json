@@ -11,9 +11,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
     "@smartodo/core": "workspace:*",
     "@smartodo/supabase": "workspace:*",
     "@smartodo/ui": "workspace:*",
+    "@supabase/ssr": "^0.10.2",
     "argon-design-system-react": "^1.1.0",
     "bootstrap": "^5.3.8",
     "next": "16.2.3",

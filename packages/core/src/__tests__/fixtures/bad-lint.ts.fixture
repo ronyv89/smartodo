@@ -1,0 +1,4 @@
+// This file intentionally contains lint errors — used by lint.test.ts
+// It is named .fixture (not .ts) so ESLint and TS don't pick it up normally
+const unused = 'this variable is never used';
+console.log('direct console.log is forbidden');

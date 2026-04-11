@@ -7,6 +7,7 @@
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
     "exactOptionalPropertyTypes": true,
+    "baseUrl": ".",
     "moduleResolution": "bundler",
     "module": "ESNext",
     "target": "ES2022",

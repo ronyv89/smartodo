@@ -29,12 +29,12 @@ export interface PluginContext {
   currentUser: Profile;
 }
 
-export type HookPayload = {
+export interface HookPayload {
   'task:created': { task: Task };
   'task:updated': { task: Task; previous: Task };
   'task:completed': { task: Task };
   'task:deleted': { taskId: string };
-};
+}
 
 export interface CustomFieldDefinition {
   key: string;

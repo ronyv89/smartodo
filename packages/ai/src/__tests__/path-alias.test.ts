@@ -1,12 +1,13 @@
-import type { AIProvider, ParsedTask } from '@smartodo/ai';
+import type { ParsedTask } from '@smartodo/ai';
 
 describe('@smartodo/ai path alias', () => {
-  it('resolves AI provider interface correctly', () => {
+  it('resolves ParsedTask type correctly (compile-time check)', () => {
     const parsed: ParsedTask = { title: 'Buy groceries', priority: 'p2' };
     expect(parsed.title).toBe('Buy groceries');
+  });
 
-    // Compile-time check: AIProvider is assignable
-    const _check: AIProvider | undefined = undefined;
-    expect(_check).toBeUndefined();
+  it('package module resolves', async () => {
+    const ai = await import('@smartodo/ai');
+    expect(ai).toBeDefined();
   });
 });

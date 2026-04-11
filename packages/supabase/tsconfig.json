@@ -3,7 +3,9 @@
   "compilerOptions": {
     "baseUrl": "../..",
     "outDir": "dist",
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    // supabase-js v2 is incompatible with exactOptionalPropertyTypes — disable for this package only
+    "exactOptionalPropertyTypes": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

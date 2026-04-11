@@ -1,4 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient as _createClient } from '@supabase/supabase-js';
+import type { Database } from './database.types';
 
 /**
  * Validates that a required environment variable is set.
@@ -24,6 +25,8 @@ const supabaseAnonKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
  * Typed Supabase client for browser/SSR usage.
  * Use this in React Server Components, Client Components, and Server Actions.
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = _createClient<Database>(supabaseUrl, supabaseAnonKey);
 
-export { createClient };
+export function createClient(url: string, key: string) {
+  return _createClient<Database>(url, key);
+}

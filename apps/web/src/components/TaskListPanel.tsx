@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { PriorityBadge, StatusBadge } from '@smartodo/ui';
 import type { Task, Project } from '@smartodo/supabase';
 import { listProjects, listTasks, createTask, updateTask, deleteTask } from '@smartodo/supabase';
+import KanbanBoard from './KanbanBoard';
 
 interface TaskListPanelProps {
   workspaceId: string;
@@ -15,6 +16,8 @@ interface TaskFormState {
   priority: Task['priority'];
 }
 
+type ViewMode = 'list' | 'board';
+
 export default function TaskListPanel({ workspaceId, userId: _userId }: TaskListPanelProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -22,6 +25,7 @@ export default function TaskListPanel({ workspaceId, userId: _userId }: TaskList
   const [loading, setLoading] = useState(true);
   const [taskForm, setTaskForm] = useState<TaskFormState>({ title: '', priority: 'p3' });
   const [submitting, setSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const fetchTasks = useCallback(async (projectId: string) => {
     const { data } = await listTasks(projectId);
@@ -93,26 +97,55 @@ export default function TaskListPanel({ workspaceId, userId: _userId }: TaskList
 
   return (
     <div data-testid="task-list-panel">
-      {/* Project tabs */}
-      <div className="mb-6 flex gap-2 border-b border-gray-200">
-        {projects.map((project) => (
+      {/* Header: project tabs + view toggle */}
+      <div className="mb-6 flex items-end justify-between border-b border-gray-200">
+        <div className="flex gap-2">
+          {projects.map((project) => (
+            <button
+              key={project.id}
+              onClick={() => {
+                setActiveProjectId(project.id);
+                void fetchTasks(project.id);
+              }}
+              data-testid={`project-tab-${project.id}`}
+              className={[
+                'border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+                activeProjectId === project.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-800',
+              ].join(' ')}
+            >
+              {project.name}
+            </button>
+          ))}
+        </div>
+        {/* View toggle */}
+        <div className="mb-1 flex gap-1 rounded-lg border border-gray-200 p-1">
           <button
-            key={project.id}
             onClick={() => {
-              setActiveProjectId(project.id);
-              void fetchTasks(project.id);
+              setViewMode('list');
             }}
-            data-testid={`project-tab-${project.id}`}
+            data-testid="view-list"
             className={[
-              'border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-              activeProjectId === project.id
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-800',
+              'rounded px-3 py-1 text-xs font-medium',
+              viewMode === 'list' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:text-gray-800',
             ].join(' ')}
           >
-            {project.name}
+            List
           </button>
-        ))}
+          <button
+            onClick={() => {
+              setViewMode('board');
+            }}
+            data-testid="view-board"
+            className={[
+              'rounded px-3 py-1 text-xs font-medium',
+              viewMode === 'board' ? 'bg-blue-500 text-white' : 'text-gray-500 hover:text-gray-800',
+            ].join(' ')}
+          >
+            Board
+          </button>
+        </div>
       </div>
 
       {/* Add task form */}
@@ -157,56 +190,61 @@ export default function TaskListPanel({ workspaceId, userId: _userId }: TaskList
         </button>
       </form>
 
+      {/* Kanban board */}
+      {viewMode === 'board' && <KanbanBoard tasks={tasks} onTasksChange={setTasks} />}
+
       {/* Task list */}
-      <ul data-testid="task-list" className="space-y-2">
-        {tasks.length === 0 && (
-          <li className="py-8 text-center text-sm text-gray-400" data-testid="empty-task-list">
-            No tasks yet — add one above!
-          </li>
-        )}
-        {tasks.map((task) => (
-          <li
-            key={task.id}
-            data-testid={`task-item-${task.id}`}
-            className="card-smartodo flex items-center gap-3 rounded-lg bg-white px-4 py-3"
-          >
-            {/* Status toggle */}
-            <input
-              type="checkbox"
-              checked={task.status === 'done'}
-              onChange={(e) => {
-                void handleStatusChange(task.id, e.target.checked ? 'done' : 'todo');
-              }}
-              aria-label={`Mark "${task.title}" as ${task.status === 'done' ? 'todo' : 'done'}`}
-              className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-blue-500"
-            />
-
-            {/* Title */}
-            <span
-              className={[
-                'flex-1 text-sm',
-                task.status === 'done' ? 'text-gray-400 line-through' : 'text-gray-800',
-              ].join(' ')}
+      {viewMode === 'list' && (
+        <ul data-testid="task-list" className="space-y-2">
+          {tasks.length === 0 && (
+            <li className="py-8 text-center text-sm text-gray-400" data-testid="empty-task-list">
+              No tasks yet — add one above!
+            </li>
+          )}
+          {tasks.map((task) => (
+            <li
+              key={task.id}
+              data-testid={`task-item-${task.id}`}
+              className="card-smartodo flex items-center gap-3 rounded-lg bg-white px-4 py-3"
             >
-              {task.title}
-            </span>
+              {/* Status toggle */}
+              <input
+                type="checkbox"
+                checked={task.status === 'done'}
+                onChange={(e) => {
+                  void handleStatusChange(task.id, e.target.checked ? 'done' : 'todo');
+                }}
+                aria-label={`Mark "${task.title}" as ${task.status === 'done' ? 'todo' : 'done'}`}
+                className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-blue-500"
+              />
 
-            {/* Badges */}
-            <PriorityBadge priority={task.priority} />
-            <StatusBadge status={task.status} />
+              {/* Title */}
+              <span
+                className={[
+                  'flex-1 text-sm',
+                  task.status === 'done' ? 'text-gray-400 line-through' : 'text-gray-800',
+                ].join(' ')}
+              >
+                {task.title}
+              </span>
 
-            {/* Delete */}
-            <button
-              onClick={() => void handleDelete(task.id)}
-              aria-label={`Delete "${task.title}"`}
-              data-testid={`delete-task-${task.id}`}
-              className="ml-2 text-gray-300 hover:text-red-400"
-            >
-              ✕
-            </button>
-          </li>
-        ))}
-      </ul>
+              {/* Badges */}
+              <PriorityBadge priority={task.priority} />
+              <StatusBadge status={task.status} />
+
+              {/* Delete */}
+              <button
+                onClick={() => void handleDelete(task.id)}
+                aria-label={`Delete "${task.title}"`}
+                data-testid={`delete-task-${task.id}`}
+                className="ml-2 text-gray-300 hover:text-red-400"
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

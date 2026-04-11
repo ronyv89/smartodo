@@ -1,0 +1,114 @@
+version: '3.8'
+
+# Local Supabase stack for development and CI
+# For day-to-day dev, prefer `supabase start` (Supabase CLI)
+# This compose file is for production-like and CI environments
+
+services:
+  supabase-db:
+    image: supabase/postgres:15.1.1.78
+    ports:
+      - '54322:5432'
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: smartodo
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  supabase-studio:
+    image: supabase/studio:latest
+    ports:
+      - '54323:3000'
+    environment:
+      STUDIO_PG_META_URL: http://supabase-meta:8080
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  supabase-kong:
+    image: kong:2.8.1
+    ports:
+      - '54321:8000' # Supabase API
+      - '54324:8443' # Supabase API (SSL)
+    environment:
+      KONG_DATABASE: 'off'
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  supabase-auth:
+    image: supabase/gotrue:latest
+    ports:
+      - '54325:9999'
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:postgres@supabase-db:5432/smartodo?search_path=auth
+      GOTRUE_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      GOTRUE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_DISABLE_SIGNUP: 'false'
+      API_EXTERNAL_URL: http://localhost:54321
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  supabase-realtime:
+    image: supabase/realtime:latest
+    environment:
+      DB_HOST: supabase-db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: smartodo
+      PORT: 4000
+      JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
+      REPLICATION_MODE: RLS
+      REPLICATION_POLL_INTERVAL: 100
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  supabase-storage:
+    image: supabase/storage-api:latest
+    environment:
+      ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder}
+      SERVICE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder}
+      POSTGREST_URL: http://supabase-kong:8000/rest/v1
+      PGRST_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
+      DATABASE_URL: postgres://postgres:postgres@supabase-db:5432/smartodo
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+    volumes:
+      - supabase-storage-data:/var/lib/storage
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # Next.js app dev server (optional — can also run natively with `pnpm dev`)
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+    depends_on:
+      - supabase-kong
+    volumes:
+      - ../apps/web:/app/apps/web
+      - ../packages:/app/packages
+
+volumes:
+  supabase-db-data:
+  supabase-storage-data:

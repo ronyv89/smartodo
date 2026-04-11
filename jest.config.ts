@@ -7,6 +7,12 @@ const config: Config = {
   testMatch: ['**/*.test.ts', '**/*.test.tsx'],
   testPathIgnorePatterns: ['/node_modules/', 'integration'],
   moduleNameMapper: {
+    // Force a single React instance across all packages in tests — prevents
+    // "Invalid hook call" errors caused by react@19.2.4 vs react-dom@19.2.5
+    // version skew when @testing-library/react resolves a newer patch release.
+    '^react$': '<rootDir>/apps/web/node_modules/react',
+    '^react-dom$': '<rootDir>/apps/web/node_modules/react-dom',
+    '^react-dom/(.*)$': '<rootDir>/apps/web/node_modules/react-dom/$1',
     '^@smartodo/core(.*)$': '<rootDir>/packages/core/src$1',
     '^@smartodo/ui(.*)$': '<rootDir>/packages/ui/src$1',
     '^@smartodo/plugin-sdk(.*)$': '<rootDir>/packages/plugin-sdk/src$1',

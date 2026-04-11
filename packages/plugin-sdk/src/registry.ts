@@ -1,4 +1,11 @@
-import type { HookEvent, HookPayload, PluginContext, PluginManifest, UISlotName } from './types';
+import type {
+  HookEvent,
+  HookPayload,
+  PluginContext,
+  PluginManifest,
+  SlotComponent,
+  UISlotName,
+} from './types';
 
 const VALID_HOOK_EVENTS = new Set<HookEvent>([
   'task:created',
@@ -23,6 +30,8 @@ export type HookHandler<E extends HookEvent> = (
 export interface PluginDefinition {
   manifest: PluginManifest;
   hooks?: Partial<{ [E in HookEvent]: HookHandler<E> }>;
+  /** React components contributed to named UI slots. */
+  slotComponents?: Partial<Record<UISlotName, SlotComponent>>;
 }
 
 /**

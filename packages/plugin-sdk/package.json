@@ -12,7 +12,11 @@
   "dependencies": {
     "@smartodo/core": "workspace:*"
   },
+  "peerDependencies": {
+    "react": ">=18"
+  },
   "devDependencies": {
+    "@types/react": "^19",
     "typescript": "*"
   }
 }

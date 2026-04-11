@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { Task, TaskComment, ActivityLog, Label } from '@smartodo/supabase';
+import { useEffect, useRef, useState } from 'react';
+import type { Task, TaskComment, ActivityLog, Label, TaskAttachment } from '@smartodo/supabase';
 import { PriorityBadge, StatusBadge } from '@smartodo/ui';
 import {
   updateTask,
@@ -11,10 +11,14 @@ import {
   listActivityLogs,
   logActivity,
   listLabels,
+  listAttachments,
+  uploadAttachment,
+  deleteAttachment,
+  getAttachmentUrl,
+  createTask,
 } from '@smartodo/supabase';
 import type { SuggestLabelsResponse } from '@/app/api/ai/suggest-labels/route';
 import type { BreakdownResponse, SubtaskSuggestion } from '@/app/api/ai/breakdown/route';
-import { createTask } from '@smartodo/supabase';
 
 interface TaskDetailPanelProps {
   task: Task;
@@ -43,17 +47,23 @@ export default function TaskDetailPanel({
   const [suggestedSubtasks, setSuggestedSubtasks] = useState<SubtaskSuggestion[]>([]);
   const [breakingDown, setBreakingDown] = useState(false);
   const [creatingSubtasks, setCreatingSubtasks] = useState(false);
+  const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void (async () => {
-      const [commentsResult, logsResult, labelsResult] = await Promise.all([
+      const [commentsResult, logsResult, labelsResult, attachmentsResult] = await Promise.all([
         listComments(task.id),
         listActivityLogs(task.id),
         listLabels(workspaceId),
+        listAttachments(task.id),
       ]);
       setComments(commentsResult.data ?? []);
       setActivityLogs(logsResult.data ?? []);
       setWorkspaceLabels(labelsResult.data ?? []);
+      setAttachments(attachmentsResult.data ?? []);
     })();
   }, [task.id, workspaceId]);
 
@@ -105,6 +115,32 @@ export default function TaskDetailPanel({
     );
     setSuggestedSubtasks([]);
     setCreatingSubtasks(false);
+  }
+
+  async function handleFileUpload(files: FileList | null) {
+    if (files === null || files.length === 0) return;
+    setUploadingFile(true);
+    await Promise.all(
+      Array.from(files).map(async (file) => {
+        const { data } = await uploadAttachment(task.id, userId, file);
+        if (data !== null) {
+          setAttachments((prev) => [...prev, data]);
+        }
+      }),
+    );
+    setUploadingFile(false);
+  }
+
+  async function handleDeleteAttachment(attachment: TaskAttachment) {
+    await deleteAttachment(attachment);
+    setAttachments((prev) => prev.filter((a) => a.id !== attachment.id));
+  }
+
+  async function handleOpenAttachment(attachment: TaskAttachment) {
+    const { data: url } = await getAttachmentUrl(attachment.storage_path);
+    if (typeof url === 'string') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   }
 
   async function handleTitleSave() {
@@ -359,6 +395,91 @@ export default function TaskDetailPanel({
           )}
         </div>
 
+        {/* Attachments */}
+        <div className="mb-6">
+          <div className="mb-2 flex items-center justify-between">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Attachments ({attachments.length})
+            </label>
+            <button
+              onClick={() => {
+                fileInputRef.current?.click();
+              }}
+              disabled={uploadingFile}
+              data-testid="attach-file-btn"
+              className="rounded px-2 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+            >
+              {uploadingFile ? 'Uploading…' : 'Attach'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              data-testid="file-input"
+              onChange={(e) => void handleFileUpload(e.target.files)}
+            />
+          </div>
+
+          {/* Drag-and-drop zone */}
+          <div
+            data-testid="drop-zone"
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => {
+              setDragOver(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              void handleFileUpload(e.dataTransfer.files);
+            }}
+            className={[
+              'mb-2 rounded-lg border-2 border-dashed px-4 py-3 text-center text-xs transition',
+              dragOver
+                ? 'border-blue-400 bg-blue-50 text-blue-600'
+                : 'border-gray-200 text-gray-400',
+            ].join(' ')}
+          >
+            {uploadingFile ? 'Uploading…' : 'Drop files here or click Attach'}
+          </div>
+
+          {/* Attachment list */}
+          {attachments.length > 0 && (
+            <ul data-testid="attachment-list" className="space-y-1">
+              {attachments.map((attachment) => (
+                <li
+                  key={attachment.id}
+                  data-testid={`attachment-${attachment.id}`}
+                  className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2"
+                >
+                  <span className="text-base">📎</span>
+                  <button
+                    onClick={() => void handleOpenAttachment(attachment)}
+                    className="flex-1 truncate text-left text-xs text-blue-600 hover:underline"
+                    data-testid={`attachment-open-${attachment.id}`}
+                  >
+                    {attachment.file_name}
+                  </button>
+                  <span className="shrink-0 text-xs text-gray-400">
+                    {formatBytes(attachment.file_size)}
+                  </span>
+                  <button
+                    onClick={() => void handleDeleteAttachment(attachment)}
+                    aria-label={`Delete ${attachment.file_name}`}
+                    data-testid={`attachment-delete-${attachment.id}`}
+                    className="text-gray-300 hover:text-red-400"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         {/* Comments */}
         <div>
           <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -453,4 +574,10 @@ export default function TaskDetailPanel({
       </div>
     </aside>
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${String(bytes)} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

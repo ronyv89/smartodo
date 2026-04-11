@@ -259,6 +259,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      task_attachments: {
+        Row: {
+          id: string;
+          task_id: string;
+          uploader_id: string;
+          file_name: string;
+          file_size: number;
+          mime_type: string;
+          storage_path: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          uploader_id: string;
+          file_name: string;
+          file_size: number;
+          mime_type: string;
+          storage_path: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          task_id?: string;
+          uploader_id?: string;
+          file_name?: string;
+          file_size?: number;
+          mime_type?: string;
+          storage_path?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

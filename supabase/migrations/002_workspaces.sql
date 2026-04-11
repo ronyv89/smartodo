@@ -3,7 +3,7 @@
 -- and a trigger that auto-creates the owner's membership on workspace creation.
 
 -- ─────────────────────────────────────────────
--- workspaces
+-- workspaces (table only — policies created below after workspace_members)
 -- ─────────────────────────────────────────────
 create table if not exists public.workspaces (
   id         uuid primary key default gen_random_uuid(),
@@ -15,6 +15,22 @@ create table if not exists public.workspaces (
   created_at timestamptz not null default now()
 );
 
+-- ─────────────────────────────────────────────
+-- workspace_members (created before workspaces policies so that cross-table
+-- references in USING expressions resolve correctly in plain Postgres)
+-- ─────────────────────────────────────────────
+create table if not exists public.workspace_members (
+  id           uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  user_id      uuid not null references public.profiles(id) on delete cascade,
+  role         text not null default 'member' check (role in ('admin', 'member', 'viewer')),
+  joined_at    timestamptz not null default now(),
+  unique (workspace_id, user_id)
+);
+
+-- ─────────────────────────────────────────────
+-- RLS — workspaces
+-- ─────────────────────────────────────────────
 alter table public.workspaces enable row level security;
 
 -- Members (and owners) can read workspaces they belong to
@@ -48,17 +64,8 @@ create policy "workspaces: owner can delete"
   using (auth.uid() = owner_id);
 
 -- ─────────────────────────────────────────────
--- workspace_members
+-- RLS — workspace_members
 -- ─────────────────────────────────────────────
-create table if not exists public.workspace_members (
-  id           uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references public.workspaces(id) on delete cascade,
-  user_id      uuid not null references public.profiles(id) on delete cascade,
-  role         text not null default 'member' check (role in ('admin', 'member', 'viewer')),
-  joined_at    timestamptz not null default now(),
-  unique (workspace_id, user_id)
-);
-
 alter table public.workspace_members enable row level security;
 
 -- Members can see other members of the same workspace

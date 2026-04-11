@@ -1,6 +1,7 @@
 /**
  * Integration test: verifies the Supabase client can connect.
- * Requires a running Supabase instance (local via `supabase start` or Docker).
+ * Requires a running Postgres instance — started automatically by
+ * jest.integration.setup.ts via Docker.
  * Skipped automatically when DATABASE_URL is not set.
  */
 const skipIntegration = process.env.DATABASE_URL === undefined || process.env.DATABASE_URL === '';

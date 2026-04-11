@@ -5,6 +5,7 @@ import { PriorityBadge, StatusBadge } from '@smartodo/ui';
 import type { Task, Project } from '@smartodo/supabase';
 import { listProjects, listTasks, createTask, updateTask, deleteTask } from '@smartodo/supabase';
 import KanbanBoard from './KanbanBoard';
+import TaskDetailPanel from './TaskDetailPanel';
 
 interface TaskListPanelProps {
   workspaceId: string;
@@ -18,7 +19,7 @@ interface TaskFormState {
 
 type ViewMode = 'list' | 'board';
 
-export default function TaskListPanel({ workspaceId, userId: _userId }: TaskListPanelProps) {
+export default function TaskListPanel({ workspaceId, userId }: TaskListPanelProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -26,6 +27,7 @@ export default function TaskListPanel({ workspaceId, userId: _userId }: TaskList
   const [taskForm, setTaskForm] = useState<TaskFormState>({ title: '', priority: 'p3' });
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const fetchTasks = useCallback(async (projectId: string) => {
     const { data } = await listTasks(projectId);
@@ -76,6 +78,12 @@ export default function TaskListPanel({ workspaceId, userId: _userId }: TaskList
   async function handleDelete(taskId: string) {
     await deleteTask(taskId);
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    if (selectedTask?.id === taskId) setSelectedTask(null);
+  }
+
+  function handleTaskUpdate(updated: Task) {
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    setSelectedTask(updated);
   }
 
   if (loading) {
@@ -218,15 +226,19 @@ export default function TaskListPanel({ workspaceId, userId: _userId }: TaskList
                 className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-blue-500"
               />
 
-              {/* Title */}
-              <span
+              {/* Title — click to open detail panel */}
+              <button
+                onClick={() => {
+                  setSelectedTask(task);
+                }}
+                data-testid={`task-title-${task.id}`}
                 className={[
-                  'flex-1 text-sm',
+                  'flex-1 text-left text-sm',
                   task.status === 'done' ? 'text-gray-400 line-through' : 'text-gray-800',
                 ].join(' ')}
               >
                 {task.title}
-              </span>
+              </button>
 
               {/* Badges */}
               <PriorityBadge priority={task.priority} />
@@ -244,6 +256,18 @@ export default function TaskListPanel({ workspaceId, userId: _userId }: TaskList
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Task detail panel (slide-in from right) */}
+      {selectedTask !== null && (
+        <TaskDetailPanel
+          task={selectedTask}
+          userId={userId}
+          onClose={() => {
+            setSelectedTask(null);
+          }}
+          onTaskUpdate={handleTaskUpdate}
+        />
       )}
     </div>
   );

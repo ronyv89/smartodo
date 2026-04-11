@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { AnthropicProvider } from '@smartodo/ai';
 import type { Label } from '@smartodo/core';
 import { rateLimit } from '@/lib/rate-limit';
+import { flags } from '@/lib/feature-flags';
 
 const limiter = rateLimit({ windowMs: 60_000, max: 20 });
 
@@ -24,6 +25,13 @@ export interface SuggestLabelsResponse {
  * browser.  Returns up to 3 suggested labels from the workspace label list.
  */
 export async function POST(request: Request): Promise<NextResponse> {
+  if (!flags.aiEnabled) {
+    return NextResponse.json(
+      { error: 'AI features are not enabled on this instance.' },
+      { status: 503 },
+    );
+  }
+
   const limit = limiter(request);
   if (!limit.ok) {
     return NextResponse.json(

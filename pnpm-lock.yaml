@@ -101,6 +101,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.88.0
+        version: 0.88.0(zod@4.3.6)
       '@smartodo/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -156,6 +159,9 @@ importers:
 
   packages/ai:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.88.0
+        version: 0.88.0(zod@4.3.6)
       '@smartodo/core':
         specifier: workspace:*
         version: link:../core
@@ -175,7 +181,13 @@ importers:
       '@smartodo/core':
         specifier: workspace:*
         version: link:../core
+      react:
+        specifier: '>=18'
+        version: 19.2.4
     devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
       typescript:
         specifier: '*'
         version: 5.9.3
@@ -209,6 +221,44 @@ importers:
         specifier: '*'
         version: 5.9.3
 
+  plugins/sprint-board:
+    dependencies:
+      '@smartodo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@smartodo/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      react:
+        specifier: '>=18'
+        version: 19.2.4
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
+      typescript:
+        specifier: '*'
+        version: 5.9.3
+
+  plugins/time-tracking:
+    dependencies:
+      '@smartodo/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@smartodo/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      react:
+        specifier: '>=18'
+        version: 19.2.4
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
+      typescript:
+        specifier: '*'
+        version: 5.9.3
+
 packages:
 
   '@adobe/css-tools@4.4.4':
@@ -217,6 +267,15 @@ packages:
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
+
+  '@anthropic-ai/sdk@0.88.0':
+    resolution: {integrity: sha512-QQOtB5U9ZBJQj6y1ICmDZl14LWa4JCiJRoihI+0yuZ4OjbONrakP0yLwPv4DJFb3VYCtQM31bTOpCBMs2zghPw==}
+    hasBin: true
+    peerDependencies:
+      zod: ^3.25.0 || ^4.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
@@ -5767,6 +5826,10 @@ packages:
   json-parse-even-better-errors@2.3.1:
     resolution: {integrity: sha512-xyFwyhro/JEof6Ghe2iz2NcXoj2sloNsWr/XsERDK/oiPCfaNhl5ONfp+jQdAZRQQ0IJWNzH9zIZF7li91kh2w==}
 
+  json-schema-to-ts@3.1.1:
+    resolution: {integrity: sha512-+DWg8jCJG2TEnpy7kOm/7/AxaYoaRbjVB4LFZLySZlWn8exGs3A4OLJR966cVvU26N7X9TWxl+Jsw7dzAqKT6g==}
+    engines: {node: '>=16'}
+
   json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
 
@@ -8609,6 +8672,9 @@ packages:
   true-case-path@1.0.3:
     resolution: {integrity: sha512-m6s2OdQe5wgpFMC+pAJ+q9djG82O2jcHPOI6RNg1yy9rCYR+WD6Nbpl32fDpfC56nirdRy+opFa/Vk7HYhqaew==}
 
+  ts-algebra@2.0.0:
+    resolution: {integrity: sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw==}
+
   ts-api-utils@2.5.0:
     resolution: {integrity: sha512-OJ/ibxhPlqrMM0UiNHJ/0CKQkoKF243/AEmplt3qpRgkW8VG7IfOS41h7V8TjITqdByHzrjcS/2si+y4lIh8NA==}
     engines: {node: '>=18.12'}
@@ -9305,6 +9371,12 @@ snapshots:
   '@adobe/css-tools@4.4.4': {}
 
   '@alloc/quick-lru@5.2.0': {}
+
+  '@anthropic-ai/sdk@0.88.0(zod@4.3.6)':
+    dependencies:
+      json-schema-to-ts: 3.1.1
+    optionalDependencies:
+      zod: 4.3.6
 
   '@asamuzakjp/css-color@3.2.0':
     dependencies:
@@ -11311,7 +11383,9 @@ snapshots:
       source-map: 0.6.1
       string-length: 2.0.0
     transitivePeerDependencies:
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@jest/reporters@29.7.0':
     dependencies:
@@ -16437,7 +16511,9 @@ snapshots:
       pretty-format: 24.9.0
       throat: 4.1.0
     transitivePeerDependencies:
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   jest-leak-detector@24.9.0:
     dependencies:
@@ -16964,6 +17040,11 @@ snapshots:
   json-parse-better-errors@1.0.2: {}
 
   json-parse-even-better-errors@2.3.1: {}
+
+  json-schema-to-ts@3.1.1:
+    dependencies:
+      '@babel/runtime': 7.29.2
+      ts-algebra: 2.0.0
 
   json-schema-traverse@0.4.1: {}
 
@@ -20246,6 +20327,8 @@ snapshots:
   true-case-path@1.0.3:
     dependencies:
       glob: 7.2.3
+
+  ts-algebra@2.0.0: {}
 
   ts-api-utils@2.5.0(typescript@5.9.3):
     dependencies:

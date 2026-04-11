@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { rateLimit } from '@/lib/rate-limit';
+import { flags } from '@/lib/feature-flags';
 
 const limiter = rateLimit({ windowMs: 60_000, max: 20 });
 
@@ -67,6 +68,13 @@ Rules:
  * for mutations).
  */
 export async function POST(request: Request): Promise<NextResponse> {
+  if (!flags.aiEnabled) {
+    return NextResponse.json(
+      { error: 'AI features are not enabled on this instance.' },
+      { status: 503 },
+    );
+  }
+
   const limit = limiter(request);
   if (!limit.ok) {
     return NextResponse.json(

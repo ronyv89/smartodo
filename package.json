@@ -1,0 +1,48 @@
+{
+  "name": "smartodo",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "format": "prettier --write \"**/*.{ts,tsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,css,md}\"",
+    "typecheck": "turbo run typecheck",
+    "test:unit": "jest --passWithNoTests",
+    "test:integration": "jest --config jest.integration.config.ts --passWithNoTests",
+    "test:e2e": "cypress run --headless",
+    "test:e2e:open": "cypress open"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^22.0.0",
+    "cypress": "^13.0.0",
+    "husky": "^9.0.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^30.3.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.3.0",
+    "prettier-plugin-tailwindcss": "^0.6.0",
+    "ts-jest": "^29.2.0",
+    "ts-node": "^10.9.2",
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "*.{json,css,md}": [
+      "prettier --write"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.33.0"
+}

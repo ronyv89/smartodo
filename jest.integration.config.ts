@@ -15,7 +15,7 @@ const config: Config = {
   globalSetup: '<rootDir>/jest.integration.setup.ts',
   globalTeardown: '<rootDir>/jest.integration.teardown.ts',
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: './tsconfig.json' }],
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: './tsconfig.test.json', diagnostics: false }],
   },
 };
 

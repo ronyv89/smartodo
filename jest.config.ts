@@ -15,14 +15,11 @@ const config: Config = {
     '^@/(.*)$': '<rootDir>/apps/web/src/$1',
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  collectCoverageFrom: [
-    '**/*.{ts,tsx}',
-    '!**/*.d.ts',
-    '!**/node_modules/**',
-    '!**/dist/**',
-  ],
+  collectCoverageFrom: ['**/*.{ts,tsx}', '!**/*.d.ts', '!**/node_modules/**', '!**/dist/**'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: './tsconfig.json' }],
+    // diagnostics:false — type-checking is done separately by `pnpm run typecheck`
+    // This avoids Cypress/Jest type conflicts (chai vs jest globals) in the ts-jest compile step
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: './tsconfig.test.json', diagnostics: false }],
   },
 };
 

@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'  # obsolete — removed to suppress Docker Compose warning
 
 # smarTODO — local / self-hosted stack
 #
@@ -53,7 +53,7 @@ services:
 
   # ── GoTrue (auth) ─────────────────────────────────────────────────────────────
   supabase-auth:
-    image: supabase/gotrue:latest
+    image: supabase/gotrue:v2.186.0
     ports:
       - '54325:9999'
     environment:
@@ -106,7 +106,9 @@ services:
         condition: service_healthy
 
   # ── Next.js app ──────────────────────────────────────────────────────────────
+  # Not started by default — run with: docker compose --profile production up
   app:
+    profiles: [production]
     build:
       context: ..
       dockerfile: docker/Dockerfile

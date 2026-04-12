@@ -7,7 +7,7 @@ import type { Database } from '@smartodo/supabase';
  * Refreshes the user session on every request so Server Components always
  * receive a valid, non-expired token.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(

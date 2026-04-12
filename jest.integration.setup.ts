@@ -14,7 +14,7 @@ import path from 'path';
 import { Client } from 'pg';
 
 const CONTAINER_NAME = 'smartodo-test-db';
-const PG_PORT = '54322';
+const PG_PORT = '54399'; // dedicated test port — avoids conflict with docker-compose supabase-db (54322)
 const PG_PASSWORD = 'postgres';
 const PG_DB = 'smartodo';
 const DATABASE_URL = `postgresql://postgres:${PG_PASSWORD}@localhost:${PG_PORT}/${PG_DB}`;
@@ -57,7 +57,6 @@ async function applySQL(url: string, file: string): Promise<void> {
 }
 
 export default async function globalSetup(): Promise<void> {
-  // Remove any leftover container from a previous run
   if (containerRunning()) {
     console.warn('[integration] Reusing existing smartodo-test-db container');
   } else {

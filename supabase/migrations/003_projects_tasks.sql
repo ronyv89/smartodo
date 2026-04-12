@@ -18,6 +18,7 @@ create table if not exists public.projects (
 
 alter table public.projects enable row level security;
 
+drop policy if exists "projects: workspace members can read" on public.projects;
 create policy "projects: workspace members can read"
   on public.projects for select
   using (
@@ -27,6 +28,7 @@ create policy "projects: workspace members can read"
     )
   );
 
+drop policy if exists "projects: admin/member can create" on public.projects;
 create policy "projects: admin/member can create"
   on public.projects for insert
   with check (
@@ -38,6 +40,7 @@ create policy "projects: admin/member can create"
     )
   );
 
+drop policy if exists "projects: admin/member can update" on public.projects;
 create policy "projects: admin/member can update"
   on public.projects for update
   using (
@@ -49,6 +52,7 @@ create policy "projects: admin/member can update"
     )
   );
 
+drop policy if exists "projects: admin can delete" on public.projects;
 create policy "projects: admin can delete"
   on public.projects for delete
   using (
@@ -82,6 +86,7 @@ create table if not exists public.tasks (
 
 alter table public.tasks enable row level security;
 
+drop policy if exists "tasks: workspace members can read" on public.tasks;
 create policy "tasks: workspace members can read"
   on public.tasks for select
   using (
@@ -93,6 +98,7 @@ create policy "tasks: workspace members can read"
     )
   );
 
+drop policy if exists "tasks: admin/member can create" on public.tasks;
 create policy "tasks: admin/member can create"
   on public.tasks for insert
   with check (
@@ -106,6 +112,7 @@ create policy "tasks: admin/member can create"
     )
   );
 
+drop policy if exists "tasks: admin/member can update" on public.tasks;
 create policy "tasks: admin/member can update"
   on public.tasks for update
   using (
@@ -119,6 +126,7 @@ create policy "tasks: admin/member can update"
     )
   );
 
+drop policy if exists "tasks: admin/member can delete" on public.tasks;
 create policy "tasks: admin/member can delete"
   on public.tasks for delete
   using (
@@ -145,6 +153,7 @@ create table if not exists public.labels (
 
 alter table public.labels enable row level security;
 
+drop policy if exists "labels: workspace members can read" on public.labels;
 create policy "labels: workspace members can read"
   on public.labels for select
   using (
@@ -154,6 +163,7 @@ create policy "labels: workspace members can read"
     )
   );
 
+drop policy if exists "labels: admin/member can manage" on public.labels;
 create policy "labels: admin/member can manage"
   on public.labels for all
   using (
@@ -176,6 +186,7 @@ create table if not exists public.task_labels (
 
 alter table public.task_labels enable row level security;
 
+drop policy if exists "task_labels: workspace members can read" on public.task_labels;
 create policy "task_labels: workspace members can read"
   on public.task_labels for select
   using (
@@ -188,6 +199,7 @@ create policy "task_labels: workspace members can read"
     )
   );
 
+drop policy if exists "task_labels: admin/member can manage" on public.task_labels;
 create policy "task_labels: admin/member can manage"
   on public.task_labels for all
   using (
@@ -215,6 +227,7 @@ create table if not exists public.task_comments (
 
 alter table public.task_comments enable row level security;
 
+drop policy if exists "task_comments: workspace members can read" on public.task_comments;
 create policy "task_comments: workspace members can read"
   on public.task_comments for select
   using (
@@ -227,10 +240,12 @@ create policy "task_comments: workspace members can read"
     )
   );
 
+drop policy if exists "task_comments: members can create own" on public.task_comments;
 create policy "task_comments: members can create own"
   on public.task_comments for insert
   with check (auth.uid() = author_id);
 
+drop policy if exists "task_comments: author can delete own" on public.task_comments;
 create policy "task_comments: author can delete own"
   on public.task_comments for delete
   using (auth.uid() = author_id);
@@ -249,6 +264,7 @@ create table if not exists public.activity_logs (
 
 alter table public.activity_logs enable row level security;
 
+drop policy if exists "activity_logs: workspace members can read" on public.activity_logs;
 create policy "activity_logs: workspace members can read"
   on public.activity_logs for select
   using (
@@ -261,6 +277,7 @@ create policy "activity_logs: workspace members can read"
     )
   );
 
+drop policy if exists "activity_logs: system inserts only" on public.activity_logs;
 create policy "activity_logs: system inserts only"
   on public.activity_logs for insert
   with check (auth.uid() = actor_id);

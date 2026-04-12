@@ -16,11 +16,13 @@ create table if not exists public.profiles (
 alter table public.profiles enable row level security;
 
 -- Users can read any profile (needed for assignee display)
+drop policy if exists "profiles: anyone can read" on public.profiles;
 create policy "profiles: anyone can read"
   on public.profiles for select
   using (true);
 
 -- Users can only update their own profile
+drop policy if exists "profiles: owner can update" on public.profiles;
 create policy "profiles: owner can update"
   on public.profiles for update
   using (auth.uid() = id);

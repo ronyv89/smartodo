@@ -19,6 +19,7 @@ create index if not exists task_attachments_task_id_idx on public.task_attachmen
 --      upload to tasks in their workspaces, delete their own uploads.
 alter table public.task_attachments enable row level security;
 
+drop policy if exists "workspace members can read attachments" on public.task_attachments;
 create policy "workspace members can read attachments"
   on public.task_attachments for select
   using (
@@ -31,6 +32,7 @@ create policy "workspace members can read attachments"
     )
   );
 
+drop policy if exists "workspace members can upload attachments" on public.task_attachments;
 create policy "workspace members can upload attachments"
   on public.task_attachments for insert
   with check (
@@ -44,6 +46,7 @@ create policy "workspace members can upload attachments"
     )
   );
 
+drop policy if exists "uploaders can delete their own attachments" on public.task_attachments;
 create policy "uploaders can delete their own attachments"
   on public.task_attachments for delete
   using (uploader_id = auth.uid());

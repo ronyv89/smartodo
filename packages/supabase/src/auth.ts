@@ -1,4 +1,5 @@
 import type { AuthError, Session, User } from '@supabase/supabase-js';
+import { validatePassword } from '@smartodo/core';
 import { supabase } from './client';
 import type { Database } from './database.types';
 
@@ -33,6 +34,12 @@ export async function signUp(
   password: string,
   fullName: string,
 ): Promise<AuthResult<User>> {
+  const { valid, unmetRequirements } = validatePassword(password);
+  if (!valid) {
+    const labels = unmetRequirements.map((r) => r.label).join(', ');
+    return { data: null, error: new Error(`Password requirements not met: ${labels}.`) };
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,

@@ -11,6 +11,10 @@
 
 services:
   # ── Postgres ────────────────────────────────────────────────────────────────
+  # IMPORTANT: do NOT mount to /docker-entrypoint-initdb.d — that would
+  # override the Supabase image's built-in scripts that create the auth/storage
+  # schemas, breaking GoTrue and other Supabase services.
+  # App migrations are applied by the supabase-migrations service below.
   supabase-db:
     image: supabase/postgres:15.1.1.78
     ports:
@@ -20,12 +24,36 @@ services:
       POSTGRES_DB: smartodo
     volumes:
       - supabase-db-data:/var/lib/postgresql/data
-      - ../supabase/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      default:
+        aliases:
+          - db   # Studio sends pg=db to pg-meta; this alias makes it resolve
+
+  # ── App migrations ───────────────────────────────────────────────────────────
+  # Runs once after the DB is healthy, applies all SQL files in order, then exits.
+  supabase-migrations:
+    image: postgres:15-alpine
+    volumes:
+      - ../supabase/migrations:/migrations:ro
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    command:
+      - sh
+      - -c
+      - |
+        for f in $$(ls /migrations/*.sql | sort); do
+          echo "Applying $$f ..."
+          psql -h supabase-db -U postgres -d smartodo -f "$$f" || exit 1
+        done
+        echo "All migrations applied."
+    depends_on:
+      supabase-db:
+        condition: service_healthy
 
   # ── Supabase Studio ──────────────────────────────────────────────────────────
   supabase-studio:
@@ -34,6 +62,19 @@ services:
       - '54323:3000'
     environment:
       STUDIO_PG_META_URL: http://supabase-meta:8080
+      # Required by Studio v2+ (Next.js 16); paths just need to exist in container
+      EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /var/lib/supabase/edge-functions
+      SNIPPETS_MANAGEMENT_FOLDER: /var/lib/supabase/snippets
+      # Supabase API access for Studio dashboard
+      SUPABASE_URL: http://supabase-kong:8000
+      SUPABASE_PUBLIC_URL: http://localhost:54321
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder}
+      AUTH_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - supabase-edge-functions:/var/lib/supabase/edge-functions
+      - supabase-snippets:/var/lib/supabase/snippets
     depends_on:
       supabase-db:
         condition: service_healthy
@@ -47,6 +88,38 @@ services:
     environment:
       KONG_DATABASE: 'off'
       KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_RESOLVER: "127.0.0.11:53"   # Docker embedded DNS — must include port for resty-dns
+    volumes:
+      - ./kong.yml:/var/lib/kong/kong.yml:ro
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      supabase-auth:
+        condition: service_started
+
+  # ── PostgREST ─────────────────────────────────────────────────────────────────
+  supabase-rest:
+    image: postgrest/postgrest:v12.2.0
+    environment:
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@supabase-db:5432/smartodo
+      PGRST_DB_SCHEMA: public,storage
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
+      PGRST_DB_USE_LEGACY_GUCS: 'false'
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # ── pg-meta (used by Supabase Studio) ────────────────────────────────────────
+  supabase-meta:
+    image: supabase/postgres-meta:v0.84.2
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: supabase-db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: smartodo
+      PG_META_DB_USER: postgres
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     depends_on:
       supabase-db:
         condition: service_healthy
@@ -72,7 +145,7 @@ services:
 
   # ── Realtime ─────────────────────────────────────────────────────────────────
   supabase-realtime:
-    image: supabase/realtime:latest
+    image: supabase/realtime:v2.28.32
     environment:
       DB_HOST: supabase-db
       DB_PORT: 5432
@@ -81,6 +154,9 @@ services:
       DB_NAME: smartodo
       PORT: 4000
       JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
+      # METRICS_JWT_SECRET is required by realtime v2+ for the /metrics endpoint
+      METRICS_JWT_SECRET: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
+      SECRET_KEY_BASE: ${SUPABASE_JWT_SECRET:-super-secret-jwt-token-for-local-dev-only}
       REPLICATION_MODE: RLS
       REPLICATION_POLL_INTERVAL: 100
     depends_on:
@@ -141,3 +217,5 @@ services:
 volumes:
   supabase-db-data:
   supabase-storage-data:
+  supabase-edge-functions:
+  supabase-snippets:

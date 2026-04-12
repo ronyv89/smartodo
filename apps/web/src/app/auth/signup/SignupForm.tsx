@@ -3,6 +3,21 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { validatePassword, PASSWORD_REQUIREMENTS } from '@smartodo/core';
+
+const STRENGTH_LABEL: Record<string, string> = {
+  weak: 'Weak',
+  fair: 'Fair',
+  strong: 'Strong',
+  'very-strong': 'Very strong',
+};
+
+const STRENGTH_COLOR: Record<string, string> = {
+  weak: 'bg-red-400',
+  fair: 'bg-yellow-400',
+  strong: 'bg-blue-400',
+  'very-strong': 'bg-green-500',
+};
 
 export default function SignupForm() {
   const router = useRouter();
@@ -13,10 +28,20 @@ export default function SignupForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const passwordValidation = validatePassword(password);
+  const showRequirements = password.length > 0;
+
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (!passwordValidation.valid) {
+      const labels = passwordValidation.unmetRequirements.map((r) => r.label).join(', ');
+      setError(`Password requirements not met: ${labels}.`);
+      return;
+    }
+
+    setLoading(true);
 
     const supabase = createSupabaseBrowserClient();
     const { error: signUpError } = await supabase.auth.signUp({
@@ -111,14 +136,13 @@ export default function SignupForm() {
 
         <div className="mb-6">
           <label htmlFor="password" className="mb-1 block text-sm font-semibold text-gray-700">
-            Password <span className="font-normal text-gray-400">(min 8 characters)</span>
+            Password
           </label>
           <input
             id="password"
             type="password"
             autoComplete="new-password"
             required
-            minLength={8}
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
@@ -127,6 +151,53 @@ export default function SignupForm() {
             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             placeholder="••••••••"
           />
+
+          {showRequirements && (
+            <div data-testid="password-requirements" className="mt-3">
+              {/* Strength bar */}
+              <div className="mb-2 flex items-center gap-2">
+                <div className="flex flex-1 gap-1">
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <div
+                      key={level}
+                      className={`h-1.5 flex-1 rounded-full transition-colors ${
+                        passwordValidation.score >= level
+                          ? (STRENGTH_COLOR[passwordValidation.strength] ?? 'bg-gray-200')
+                          : 'bg-gray-200'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span
+                  data-testid="password-strength"
+                  data-strength={passwordValidation.strength}
+                  className="min-w-[5rem] text-right text-xs font-medium text-gray-500"
+                >
+                  {STRENGTH_LABEL[passwordValidation.strength]}
+                </span>
+              </div>
+
+              {/* Requirements checklist */}
+              <ul className="space-y-1">
+                {PASSWORD_REQUIREMENTS.map((req) => {
+                  const met = req.test(password);
+                  return (
+                    <li
+                      key={req.id}
+                      data-testid={`req-${req.id}`}
+                      data-met={String(met)}
+                      className="flex items-center gap-1.5 text-xs"
+                    >
+                      <span aria-hidden="true" className={met ? 'text-green-500' : 'text-gray-300'}>
+                        {met ? '✓' : '○'}
+                      </span>
+                      <span className={met ? 'text-green-700' : 'text-gray-500'}>{req.label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </div>
 
         <button

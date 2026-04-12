@@ -78,13 +78,42 @@ describe('signUp', () => {
       error: null,
     } as never);
 
-    const result = await signUp('new@example.com', 'password123', 'New User');
+    const result = await signUp('new@example.com', 'ValidPass1!', 'New User');
     expect(result.data).toEqual(fakeUser);
     expect(mockAuth.signUp).toHaveBeenCalledWith({
       email: 'new@example.com',
-      password: 'password123',
+      password: 'ValidPass1!',
       options: { data: { full_name: 'New User' } },
     });
+  });
+
+  it('returns an error and does NOT call Supabase when password is too short', async () => {
+    const result = await signUp('new@example.com', 'Ab1!', 'New User');
+    expect(result.data).toBeNull();
+    expect(result.error).not.toBeNull();
+    expect(result.error?.message).toMatch(/password requirements not met/i);
+    expect(mockAuth.signUp).not.toHaveBeenCalled();
+  });
+
+  it('returns an error when password has no uppercase letter', async () => {
+    const result = await signUp('new@example.com', 'nouppercase1!', 'New User');
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toMatch(/uppercase/i);
+    expect(mockAuth.signUp).not.toHaveBeenCalled();
+  });
+
+  it('returns an error when password has no number', async () => {
+    const result = await signUp('new@example.com', 'NoNumber!abc', 'New User');
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toMatch(/number/i);
+    expect(mockAuth.signUp).not.toHaveBeenCalled();
+  });
+
+  it('returns an error when password has no special character', async () => {
+    const result = await signUp('new@example.com', 'NoSpecial123', 'New User');
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toMatch(/special/i);
+    expect(mockAuth.signUp).not.toHaveBeenCalled();
   });
 });
 

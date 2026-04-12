@@ -34,6 +34,7 @@ create table if not exists public.workspace_members (
 alter table public.workspaces enable row level security;
 
 -- Members (and owners) can read workspaces they belong to
+drop policy if exists "workspaces: members can read" on public.workspaces;
 create policy "workspaces: members can read"
   on public.workspaces for select
   using (
@@ -44,11 +45,13 @@ create policy "workspaces: members can read"
   );
 
 -- Authenticated users can create workspaces
+drop policy if exists "workspaces: authenticated can create" on public.workspaces;
 create policy "workspaces: authenticated can create"
   on public.workspaces for insert
   with check (auth.uid() = owner_id);
 
 -- Only admin members can update workspace settings
+drop policy if exists "workspaces: admin can update" on public.workspaces;
 create policy "workspaces: admin can update"
   on public.workspaces for update
   using (
@@ -59,6 +62,7 @@ create policy "workspaces: admin can update"
   );
 
 -- Only owner can delete workspace
+drop policy if exists "workspaces: owner can delete" on public.workspaces;
 create policy "workspaces: owner can delete"
   on public.workspaces for delete
   using (auth.uid() = owner_id);
@@ -69,6 +73,7 @@ create policy "workspaces: owner can delete"
 alter table public.workspace_members enable row level security;
 
 -- Members can see other members of the same workspace
+drop policy if exists "workspace_members: members can read" on public.workspace_members;
 create policy "workspace_members: members can read"
   on public.workspace_members for select
   using (
@@ -79,6 +84,7 @@ create policy "workspace_members: members can read"
   );
 
 -- Admin members can add new members
+drop policy if exists "workspace_members: admin can insert" on public.workspace_members;
 create policy "workspace_members: admin can insert"
   on public.workspace_members for insert
   with check (
@@ -89,6 +95,7 @@ create policy "workspace_members: admin can insert"
   );
 
 -- Admin members can update roles
+drop policy if exists "workspace_members: admin can update" on public.workspace_members;
 create policy "workspace_members: admin can update"
   on public.workspace_members for update
   using (
@@ -99,6 +106,7 @@ create policy "workspace_members: admin can update"
   );
 
 -- Admin can remove members (but not themselves if they're the last admin)
+drop policy if exists "workspace_members: admin can delete" on public.workspace_members;
 create policy "workspace_members: admin can delete"
   on public.workspace_members for delete
   using (

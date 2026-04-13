@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.88.0",
+    "openai": "^4.98.0",
     "@smartodo/core": "workspace:*",
     "@smartodo/supabase": "workspace:*",
     "@smartodo/ui": "workspace:*",

@@ -52,7 +52,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'taskTitle is required' }, { status: 400 });
   }
 
-  const provider = new AnthropicProvider(process.env.ANTHROPIC_API_KEY);
+  const provider = new AnthropicProvider(process.env.OPENROUTER_API_KEY);
   const suggestions = await provider.suggestLabels(taskTitle, labels ?? []);
   const response: SuggestLabelsResponse = { suggestions };
   return NextResponse.json(response);

@@ -37,6 +37,6 @@ describe('Supabase client environment validation', () => {
     expect(envExample).toContain('NEXT_PUBLIC_SUPABASE_URL');
     expect(envExample).toContain('NEXT_PUBLIC_SUPABASE_ANON_KEY');
     expect(envExample).toContain('SUPABASE_SERVICE_ROLE_KEY');
-    expect(envExample).toContain('ANTHROPIC_API_KEY');
+    expect(envExample).toContain('OPENROUTER_API_KEY');
   });
 });

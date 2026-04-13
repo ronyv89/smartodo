@@ -1,12 +1,12 @@
 import { AnthropicProvider } from '../anthropic';
 
-// Mock the Anthropic SDK so tests never hit the network.
-jest.mock('@anthropic-ai/sdk', () => {
+// Mock the openai SDK so tests never hit the network.
+jest.mock('openai', () => {
   const mockCreate = jest.fn();
   return {
     __esModule: true,
     default: jest.fn().mockImplementation(() => ({
-      messages: { create: mockCreate },
+      chat: { completions: { create: mockCreate } },
     })),
     _mockCreate: mockCreate,
   };
@@ -15,12 +15,13 @@ jest.mock('@anthropic-ai/sdk', () => {
 // Helper to get the mock `create` function after module setup.
 function getMockCreate(): jest.Mock {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const mod = require('@anthropic-ai/sdk') as { _mockCreate: jest.Mock };
+  const mod = require('openai') as { _mockCreate: jest.Mock };
   return mod._mockCreate;
 }
 
-function textBlock(text: string) {
-  return { content: [{ type: 'text', text }] };
+/** Wrap a string in an OpenRouter/OpenAI chat completion response shape. */
+function chatResponse(content: string) {
+  return { choices: [{ message: { content } }] };
 }
 
 describe('AnthropicProvider', () => {
@@ -32,32 +33,35 @@ describe('AnthropicProvider', () => {
   });
 
   describe('summarize', () => {
-    it('returns the text from the first content block', async () => {
-      getMockCreate().mockResolvedValue(textBlock('Fix the login bug.'));
+    it('returns the text from the first choice message', async () => {
+      getMockCreate().mockResolvedValue(chatResponse('Fix the login bug.'));
       const result = await provider.summarize('Fix the login bug on the dashboard page');
       expect(result).toBe('Fix the login bug.');
     });
 
     it('falls back to the input text when content is missing', async () => {
-      getMockCreate().mockResolvedValue({ content: [] });
+      getMockCreate().mockResolvedValue({ choices: [] });
       const input = 'Some task';
       const result = await provider.summarize(input);
       expect(result).toBe(input);
     });
 
-    it('calls the API with cache_control on the system prompt', async () => {
-      getMockCreate().mockResolvedValue(textBlock('Summary.'));
+    it('calls chat.completions.create with a system and user message', async () => {
+      getMockCreate().mockResolvedValue(chatResponse('Summary.'));
       await provider.summarize('task text');
-      const call = getMockCreate().mock.calls[0]?.[0] as Record<string, unknown>;
-      const system = call.system as { cache_control?: unknown }[];
-      expect(system[0]?.cache_control).toEqual({ type: 'ephemeral' });
+      const call = getMockCreate().mock.calls[0]?.[0] as {
+        messages: { role: string; content: string }[];
+      };
+      expect(call.messages[0]?.role).toBe('system');
+      expect(call.messages[1]?.role).toBe('user');
+      expect(call.messages[1]?.content).toBe('task text');
     });
   });
 
   describe('parseTaskInput', () => {
     it('merges parsed JSON into the result with input as fallback title', async () => {
       const json = JSON.stringify({ title: 'Buy milk', due_date: '2026-04-20', priority: 'p2' });
-      getMockCreate().mockResolvedValue(textBlock(json));
+      getMockCreate().mockResolvedValue(chatResponse(json));
       const result = await provider.parseTaskInput('Buy milk by April 20 p2');
       expect(result.title).toBe('Buy milk');
       expect(result.due_date).toBe('2026-04-20');
@@ -65,7 +69,7 @@ describe('AnthropicProvider', () => {
     });
 
     it('falls back to { title: input } on invalid JSON', async () => {
-      getMockCreate().mockResolvedValue(textBlock('not-json'));
+      getMockCreate().mockResolvedValue(chatResponse('not-json'));
       const result = await provider.parseTaskInput('raw input');
       expect(result).toEqual({ title: 'raw input' });
     });
@@ -79,7 +83,7 @@ describe('AnthropicProvider', () => {
     ];
 
     it('returns matching Label objects for suggested ids', async () => {
-      getMockCreate().mockResolvedValue(textBlock('["l1","l3"]'));
+      getMockCreate().mockResolvedValue(chatResponse('["l1","l3"]'));
       const result = await provider.suggestLabels('fix docs error', labels);
       expect(result).toHaveLength(2);
       expect(result.map((l) => l.id)).toEqual(['l1', 'l3']);
@@ -92,13 +96,13 @@ describe('AnthropicProvider', () => {
     });
 
     it('limits to 3 labels even when API returns more', async () => {
-      getMockCreate().mockResolvedValue(textBlock('["l1","l2","l3","l4"]'));
+      getMockCreate().mockResolvedValue(chatResponse('["l1","l2","l3","l4"]'));
       const result = await provider.suggestLabels('task', labels);
       expect(result.length).toBeLessThanOrEqual(3);
     });
 
     it('returns empty array on invalid JSON', async () => {
-      getMockCreate().mockResolvedValue(textBlock('invalid'));
+      getMockCreate().mockResolvedValue(chatResponse('invalid'));
       const result = await provider.suggestLabels('task', labels);
       expect(result).toEqual([]);
     });

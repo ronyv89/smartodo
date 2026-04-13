@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { rateLimit } from '@/lib/rate-limit';
 import { flags } from '@/lib/feature-flags';
 
@@ -114,17 +114,26 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const userMessage = parts.join('\n');
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 512,
-    system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-    messages: [{ role: 'user', content: userMessage }],
+  const client = new OpenAI({
+    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: 'https://openrouter.ai/api/v1',
+    defaultHeaders: {
+      'HTTP-Referer': 'https://smartodo.app',
+      'X-Title': 'smarTODO',
+    },
   });
 
-  const block = response.content[0];
+  const response = await client.chat.completions.create({
+    model: process.env.OPENROUTER_MODEL ?? 'anthropic/claude-sonnet-4-5',
+    max_tokens: 512,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userMessage },
+    ],
+  });
+
   const raw =
-    block?.type === 'text' ? block.text.trim() : '{"kind":"unknown","message":"No response"}';
+    response.choices[0]?.message.content?.trim() ?? '{"kind":"unknown","message":"No response"}';
 
   let parsed: CommandResponse;
   try {

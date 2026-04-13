@@ -45,7 +45,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   // Slow path: AI fallback
-  const provider = new AnthropicProvider(process.env.ANTHROPIC_API_KEY);
+  const provider = new AnthropicProvider(process.env.OPENROUTER_API_KEY);
   const aiResult = await provider.parseTaskInput(text);
   return NextResponse.json(aiResult);
 }
